@@ -1,0 +1,4 @@
+Customer Name,Account,Phone,Email,Opening Balance,Status
+Ahmed Ali,ACC001,+966501234567,ahmed@example.com,1000,Active
+Sara Hassan,ACC002,+966502345678,sara@example.com,2500,Active
+Mohamed Ibrahim,ACC003,+966503456789,mohamed@example.com,500,Inactive

@@ -1,0 +1,32 @@
+modules = ["nodejs-20", "python-3.11", "postgresql-16"]
+
+[nix]
+channel = "stable-24_05"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "VOM Dashboard Auth Server"
+
+[[workflows.workflow]]
+name = "VOM Dashboard Auth Server"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node server.js"
+waitForPort = 5000
+
+[deployment]
+run = ["sh", "-c", "python -m http.server 5000"]
+
+[[ports]]
+localPort = 5000
+externalPort = 80
