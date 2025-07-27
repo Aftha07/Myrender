@@ -1441,7 +1441,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.isCompanyUser ? req.currentUser.id : req.currentUser.claims.sub;
       
-      const invoiceData: InsertInvoice = {
+      const invoiceData = {
         id: nanoid(),
         companyUserId: req.isCompanyUser ? userId : null,
         replitUserId: req.isCompanyUser ? null : userId,
