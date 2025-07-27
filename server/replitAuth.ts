@@ -24,13 +24,16 @@ const getOidcConfig = memoize(
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
+  const isProduction = process.env.NODE_ENV === 'production';
   const pgStore = connectPg(session);
+  
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
-    createTableIfMissing: false,
+    createTableIfMissing: true, // Allow table creation for Railway deployment
     ttl: sessionTtl,
     tableName: "sessions",
   });
+  
   return session({
     secret: process.env.SESSION_SECRET || 'fallback-session-secret-for-development-only-change-in-production',
     store: sessionStore,
@@ -38,8 +41,11 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isProduction && process.env.RAILWAY_PUBLIC_DOMAIN !== undefined,
       maxAge: sessionTtl,
+      sameSite: isProduction ? 'strict' : 'lax',
+      domain: isProduction && process.env.RAILWAY_PUBLIC_DOMAIN ? 
+        process.env.RAILWAY_PUBLIC_DOMAIN : undefined,
     },
   });
 }
