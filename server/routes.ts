@@ -661,8 +661,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(quotation);
     } catch (error) {
       console.error("Error creating quotation:", error);
-      console.error("Error stack:", error.stack);
-      res.status(500).json({ message: "Failed to create quotation", error: error.message });
+      console.error("Error stack:", error instanceof Error ? error.stack : 'Unknown error');
+      res.status(500).json({ message: "Failed to create quotation", error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -871,7 +871,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Attachments (limited processing for better performance)
-      if (quotation.attachments && quotation.attachments.length > 0) {
+      if (quotation.attachments && Array.isArray(quotation.attachments) && quotation.attachments.length > 0) {
         console.log(`Processing ${quotation.attachments.length} attachments for quotation ${quotation.referenceId}`);
         yPosition += 20;
         checkPageBreak();
@@ -959,9 +959,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
     } catch (error) {
       console.error("Error generating PDF:", error);
-      console.error("Error stack:", error?.stack);
-      console.error("Error message:", error?.message);
-      res.status(500).json({ message: "Failed to generate PDF", error: error?.message || "Unknown error" });
+      console.error("Error stack:", error instanceof Error ? error.stack : 'Unknown error');
+      console.error("Error message:", error instanceof Error ? error.message : 'Unknown error');
+      res.status(500).json({ message: "Failed to generate PDF", error: error instanceof Error ? error.message : "Unknown error" });
     }
   });
 
@@ -1055,7 +1055,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get customer details
-      const customer = await storage.getCustomer(proformaInvoice.customerId);
+      const customer = proformaInvoice.customerId ? await storage.getCustomer(proformaInvoice.customerId) : null;
       
       // Get products for item descriptions
       const userId = req.isCompanyUser ? req.currentUser.id : req.currentUser.claims.sub;
@@ -1064,7 +1064,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Debug logging
       console.log('Total products loaded:', products.length);
-      console.log('Looking for product IDs in items:', proformaInvoice.items.map((item: any) => item.productService));
+      console.log('Looking for product IDs in items:', Array.isArray(proformaInvoice.items) ? proformaInvoice.items.map((item: any) => item.productService) : []);
       console.log('Product map keys:', Array.from(productMap.keys()));
       
       // Import jsPDF and autoTable
@@ -1105,7 +1105,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Items Table
-      const items = proformaInvoice.items || [];
+      const items = Array.isArray(proformaInvoice.items) ? proformaInvoice.items : [];
       const tableData = items.map((item: any) => {
         const product = productMap.get(item.productService);
         if (!product) {
@@ -1220,7 +1220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Attachments
-      const attachments = proformaInvoice.attachments || [];
+      const attachments = Array.isArray(proformaInvoice.attachments) ? proformaInvoice.attachments : [];
       if (attachments.length > 0) {
         currentY += 15;
         
@@ -1235,7 +1235,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         doc.setFont('helvetica', 'normal');
         currentY += 10;
 
-        for (const attachment of attachments) {
+        for (const attachment of attachments as any[]) {
           try {
             // Check if attachment is an image
             const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp'];
@@ -1445,6 +1445,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: nanoid(),
         companyUserId: req.isCompanyUser ? userId : null,
         replitUserId: req.isCompanyUser ? null : userId,
+        referenceId: req.body.referenceId,
+        issueDate: new Date(req.body.issueDate),
+        dueDate: new Date(req.body.dueDate),
+        supplyDate: new Date(req.body.supplyDate),
         ...req.body,
       };
 
@@ -1616,6 +1620,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.isCompanyUser ? req.currentUser.id : req.currentUser.claims.sub;
       
       const productData: InsertProduct = {
+        id: nanoid(),
         ...insertProductSchema.parse(req.body),
         companyUserId: req.isCompanyUser ? userId : null,
         replitUserId: req.isCompanyUser ? null : userId,
@@ -1627,7 +1632,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error creating product:", error);
       
       // Check if it's a duplicate product ID error
-      if (error.code === '23505' && error.constraint === 'products_product_id_key') {
+      if (error instanceof Error && 'code' in error && error.code === '23505' && 'constraint' in error && error.constraint === 'products_product_id_key') {
         return res.status(400).json({ 
           message: "Product ID already exists. Please use a different ID.",
           field: "productId"
@@ -1658,7 +1663,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating product:", error);
       
       // Check if it's a duplicate product ID error
-      if (error.code === '23505' && error.constraint === 'products_product_id_key') {
+      if (error instanceof Error && 'code' in error && error.code === '23505' && 'constraint' in error && error.constraint === 'products_product_id_key') {
         return res.status(400).json({ 
           message: "Product ID already exists. Please use a different ID.",
           field: "productId"
@@ -1812,26 +1817,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const nextProductId = await storage.getNextProductId(userId, req.isCompanyUser);
           
           const productData: InsertProduct = {
+            id: nanoid(),
             productId: nextProductId,
-            nameEnglish: row['Name (English)'] || row['Name'] || '',
-            nameArabic: row['Name (Arabic)'] || '',
-            category: row['Category'] || 'Default Category',
-            type: row['Type'] || 'product',
-            quantity: parseInt(row['Quantity']) || 0,
-            unit: row['Unit'] || '',
-            buyingPrice: row['Buying Price'] || '0',
-            sellingPrice: row['Selling Price'] || '0',
-            tax: row['Tax'] || 'Vat 15%',
-            barcode: row['Barcode'] || '',
-            description: row['Description'] || '',
-            warehouse: row['Warehouse'] || 'Warehouse',
-            salesAccount: row['Sales Account'] || 'Sales',
-            purchasesAccount: row['Purchases Account'] || 'Purchases',
-            inventoryItem: row['Inventory Item'] === 'Yes' || true,
-            sellingProduct: row['Selling Product'] === 'Yes' || true,
-            buyingProduct: row['Buying Product'] === 'Yes' || true,
-            allowNotification: row['Allow Notification'] === 'Yes' || false,
-            minimumQuantity: parseInt(row['Minimum Quantity']) || 0,
+            nameEnglish: (row as any)['Name (English)'] || (row as any)['Name'] || '',
+            nameArabic: (row as any)['Name (Arabic)'] || '',
+            category: (row as any)['Category'] || 'Default Category',
+            type: (row as any)['Type'] || 'product',
+            quantity: parseInt((row as any)['Quantity']) || 0,
+            unit: (row as any)['Unit'] || '',
+            buyingPrice: (row as any)['Buying Price'] || '0',
+            sellingPrice: (row as any)['Selling Price'] || '0',
+            tax: (row as any)['Tax'] || 'Vat 15%',
+            barcode: (row as any)['Barcode'] || '',
+            description: (row as any)['Description'] || '',
+            warehouse: (row as any)['Warehouse'] || 'Warehouse',
+            salesAccount: (row as any)['Sales Account'] || 'Sales',
+            purchasesAccount: (row as any)['Purchases Account'] || 'Purchases',
+            inventoryItem: (row as any)['Inventory Item'] === 'Yes' || true,
+            sellingProduct: (row as any)['Selling Product'] === 'Yes' || true,
+            buyingProduct: (row as any)['Buying Product'] === 'Yes' || true,
+            allowNotification: (row as any)['Allow Notification'] === 'Yes' || false,
+            minimumQuantity: parseInt((row as any)['Minimum Quantity']) || 0,
             companyUserId: req.isCompanyUser ? userId : null,
             replitUserId: req.isCompanyUser ? null : userId,
           };
@@ -1839,7 +1845,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await storage.createProduct(productData);
           imported++;
         } catch (error) {
-          errors.push(`Row ${data.indexOf(row) + 1}: ${error.message}`);
+          errors.push(`Row ${data.indexOf(row) + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
       }
       
@@ -1900,6 +1906,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.isCompanyUser ? req.currentUser.id : req.currentUser.claims.sub;
       
       const unitData: InsertUnit = {
+        id: nanoid(),
         ...insertUnitSchema.parse(req.body),
         companyUserId: req.isCompanyUser ? userId : null,
         replitUserId: req.isCompanyUser ? null : userId,
