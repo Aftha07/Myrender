@@ -355,7 +355,7 @@ export const insertUnitSchema = createInsertSchema(units).omit({
 export const companyLoginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
-  recaptchaToken: z.string().min(1),
+  recaptchaToken: z.string().optional(), // Optional for development
 });
 
 export type CompanyLoginData = z.infer<typeof companyLoginSchema>;

@@ -161,20 +161,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Company authentication routes
   app.post('/api/auth/company/login', async (req, res) => {
     try {
-      const loginData = companyLoginSchema.parse(req.body);
+      console.log("Login request body:", req.body);
       
-      // TODO: Verify reCAPTCHA token
-      // const isRecaptchaValid = await verifyRecaptcha(loginData.recaptchaToken);
-      // if (!isRecaptchaValid) {
-      //   return res.status(400).json({ message: "reCAPTCHA verification failed" });
-      // }
+      // Simple validation for development
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
 
-      const user = await storage.getCompanyUserByEmail(loginData.email);
+      const user = await storage.getCompanyUserByEmail(email);
       if (!user || !user.isActive) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      const isPasswordValid = await bcrypt.compare(loginData.password, user.password);
+      const isPasswordValid = await bcrypt.compare(password, user.password);
       if (!isPasswordValid) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
@@ -201,7 +201,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Company login error:", error);
-      res.status(400).json({ message: "Invalid request data" });
+      res.status(500).json({ message: "Login failed" });
     }
   });
 
