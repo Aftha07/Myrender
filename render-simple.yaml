@@ -16,7 +16,6 @@ services:
           name: second-support-db
           property: connectionString
 
-  - type: pserv
-    name: second-support-db
-    env: postgresql
+databases:
+  - name: second-support-db
     plan: starter
