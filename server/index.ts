@@ -9,9 +9,11 @@ const isProduction = process.env.NODE_ENV === "production";
 // CORS configuration for production
 if (isProduction) {
   app.use(cors({
-    origin: process.env.RAILWAY_PUBLIC_DOMAIN ? 
-      [`https://${process.env.RAILWAY_PUBLIC_DOMAIN}`] : 
-      true, // Allow all origins in development
+    origin: process.env.RENDER_EXTERNAL_URL ? 
+      [process.env.RENDER_EXTERNAL_URL] : 
+      process.env.RAILWAY_PUBLIC_DOMAIN ? 
+        [`https://${process.env.RAILWAY_PUBLIC_DOMAIN}`] : 
+        true, // Allow all origins in development
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
@@ -31,7 +33,7 @@ if (isProduction) {
   });
 }
 
-// Trust proxy for Railway
+// Trust proxy for Railway and Render
 app.set('trust proxy', 1);
 
 // Middleware to handle large JSON and form bodies
@@ -82,12 +84,13 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
-  // Health check endpoint for Railway
+  // Health check endpoint for Railway and Render
   app.get('/health', (_req, res) => {
     res.status(200).json({ 
       status: 'healthy', 
       timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV 
+      environment: process.env.NODE_ENV,
+      platform: process.env.RENDER ? 'render' : process.env.RAILWAY_PUBLIC_DOMAIN ? 'railway' : 'local'
     });
   });
 
@@ -114,7 +117,7 @@ app.use((req, res, next) => {
   }
 
   const PORT = process.env.PORT || 5000;
-  const HOST = process.env.RAILWAY_PUBLIC_DOMAIN ? "0.0.0.0" : "0.0.0.0";
+  const HOST = "0.0.0.0"; // Works for both Railway and Render
 
   server.listen(
     { port: +PORT, host: HOST, reusePort: true },
@@ -126,6 +129,7 @@ app.use((req, res, next) => {
         log(`📦 Serving static files from dist/public`);
         log(`🔒 Security headers enabled`);
         log(`💾 Database: ${process.env.DATABASE_URL ? 'Connected' : 'Not configured'}`);
+        log(`🌐 Platform: ${process.env.RENDER ? 'Render' : process.env.RAILWAY_PUBLIC_DOMAIN ? 'Railway' : 'Local'}`);
       }
     }
   );

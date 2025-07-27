@@ -41,11 +41,13 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: isProduction && process.env.RAILWAY_PUBLIC_DOMAIN !== undefined,
+      secure: isProduction && (process.env.RENDER || process.env.RAILWAY_PUBLIC_DOMAIN !== undefined),
       maxAge: sessionTtl,
       sameSite: isProduction ? 'strict' : 'lax',
-      domain: isProduction && process.env.RAILWAY_PUBLIC_DOMAIN ? 
-        process.env.RAILWAY_PUBLIC_DOMAIN : undefined,
+      domain: isProduction && process.env.RENDER_EXTERNAL_URL ? 
+        new URL(process.env.RENDER_EXTERNAL_URL).hostname : 
+        isProduction && process.env.RAILWAY_PUBLIC_DOMAIN ? 
+          process.env.RAILWAY_PUBLIC_DOMAIN : undefined,
     },
   });
 }
