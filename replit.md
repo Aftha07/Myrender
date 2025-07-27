@@ -132,6 +132,14 @@ Changelog:
   - Added environment variable support for Railway's auto-generated values
   - Created nixpacks.toml and railway.json for optimized deployment
   - Updated database connection to support Railway's PostgreSQL service
+- July 27, 2025. Added comprehensive Render deployment support alongside Railway
+  - Modified CORS configuration to support both Render and Railway environments
+  - Enhanced session management for Render's domain structure
+  - Created render.yaml for one-click Blueprint deployment on Render
+  - Added platform detection in health check endpoint
+  - Updated environment variable handling for RENDER_EXTERNAL_URL
+  - Created detailed step-by-step Render deployment guide
+  - Project now supports deployment on both Railway and Render platforms
 - June 29, 2025. Initial setup
 - July 14, 2025. Enhanced quotation system with full product database integration
   - Fixed product dropdown to display actual product names instead of system IDs
